@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import IntakeFormTab from '../components/IntakeFormTab'
+import PracticeActivityTab from '../components/PracticeActivityTab'
 
 const TABS = ['Intake Form', 'Progress', 'Practice Activity', 'Fees', 'Araiki', 'Notes']
 
@@ -25,6 +26,7 @@ export default function StudentProfile() {
     supabase
       .from('students')
       .select(`
+        id,
         profile_id,
         name,
         phone,
@@ -124,9 +126,17 @@ export default function StudentProfile() {
 
       {/* Tab content */}
       <div className="border border-gray-200 border-t-0 rounded-b-xl bg-[#f8fafc] p-6">
-        {activeTab === 'Intake Form' ? (
+        {activeTab === 'Intake Form' && (
           <IntakeFormTab studentProfileId={id} />
-        ) : (
+        )}
+        {activeTab === 'Practice Activity' && (
+          <PracticeActivityTab
+            studentId={student?.id}
+            xp={student?.xp}
+            streak={student?.streak}
+          />
+        )}
+        {activeTab !== 'Intake Form' && activeTab !== 'Practice Activity' && (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 text-sm">
             {activeTab} — coming soon
           </div>
