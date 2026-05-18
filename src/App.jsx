@@ -6,6 +6,7 @@ import AccessDenied from './pages/AccessDenied'
 import Dashboard from './pages/Dashboard'
 import Leads from './pages/Leads'
 import Students from './pages/Students'
+import StudentProfile from './pages/StudentProfile'
 import Fees from './pages/Fees'
 import Araiki from './pages/Araiki'
 import Meetups from './pages/Meetups'
@@ -36,6 +37,7 @@ function AppContent() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/leads" element={<Leads />} />
         <Route path="/students" element={<Students />} />
+        <Route path="/students/:id" element={<StudentProfile />} />
         <Route path="/fees" element={<Fees />} />
         <Route path="/araiki" element={<Araiki />} />
         <Route path="/meetups" element={<Meetups />} />
