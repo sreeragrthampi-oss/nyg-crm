@@ -1,4 +1,4 @@
-// v2
+// v3
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -16,6 +16,14 @@ function initials(name) {
     .join('')
     .toUpperCase()
     .slice(0, 2)
+}
+
+function ComingSoon({ label }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 text-sm">
+      {label} — coming soon
+    </div>
+  )
 }
 
 export default function StudentProfile() {
@@ -57,6 +65,21 @@ export default function StudentProfile() {
 
   if (loading) {
     return <div className="p-6 py-16 text-center text-gray-400 text-sm">Loading student…</div>
+  }
+
+  function renderTab() {
+    switch (activeTab) {
+      case 'Intake Form':
+        return <IntakeFormTab studentProfileId={id} />
+      case 'Practice Activity':
+        return <PracticeActivityTab studentId={student?.id} xp={student?.xp} streak={student?.streak} />
+      case 'Fees':
+        return <FeesTab studentProfileId={id} />
+      case 'Notes':
+        return <NotesTab studentProfileId={id} />
+      default:
+        return <ComingSoon label={activeTab} />
+    }
   }
 
   return (
@@ -129,27 +152,7 @@ export default function StudentProfile() {
 
       {/* Tab content */}
       <div className="border border-gray-200 border-t-0 rounded-b-xl bg-[#f8fafc] p-6">
-        {activeTab === 'Intake Form' && (
-          <IntakeFormTab studentProfileId={id} />
-        )}
-        {activeTab === 'Practice Activity' && (
-          <PracticeActivityTab
-            studentId={student?.id}
-            xp={student?.xp}
-            streak={student?.streak}
-          />
-        )}
-        {activeTab === 'Fees' && (
-          <FeesTab studentProfileId={id} />
-        )}
-        {activeTab === 'Notes' && (
-          <NotesTab studentProfileId={id} />
-        )}
-        {activeTab !== 'Intake Form' && activeTab !== 'Practice Activity' && activeTab !== 'Fees' && activeTab !== 'Notes' && (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 text-sm">
-            {activeTab} — coming soon
-          </div>
-        )}
+        {renderTab()}
       </div>
     </div>
   )
