@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import AddEnrollmentModal from '../components/AddEnrollmentModal'
 
 function initials(name) {
   return (name || '?')
@@ -16,6 +17,7 @@ export default function Students() {
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [quickEnroll, setQuickEnroll] = useState(null) // { profileId, name }
 
   useEffect(() => {
     fetchStudents()
@@ -106,6 +108,7 @@ export default function Students() {
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">
                   Streak
                 </th>
+                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -150,12 +153,32 @@ export default function Students() {
                     <td className="px-5 py-3.5 text-gray-600">
                       {s.streak ? `${s.streak} days` : '—'}
                     </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          setQuickEnroll({ profileId: s.profile_id, name })
+                        }}
+                        className="text-xs font-medium text-[#1742b5] border border-[#1742b5]/30 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
+                      >
+                        + Enroll
+                      </button>
+                    </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
         </div>
+      )}
+
+      {quickEnroll && (
+        <AddEnrollmentModal
+          studentProfileId={quickEnroll.profileId}
+          studentName={quickEnroll.name}
+          onClose={() => setQuickEnroll(null)}
+          onSaved={() => setQuickEnroll(null)}
+        />
       )}
     </div>
   )

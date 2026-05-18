@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import IntakeFormTab from '../components/IntakeFormTab'
 import PracticeActivityTab from '../components/PracticeActivityTab'
+import FeesTab from '../components/FeesTab'
 
 const TABS = ['Intake Form', 'Progress', 'Practice Activity', 'Fees', 'Araiki', 'Notes']
 
@@ -136,7 +137,10 @@ export default function StudentProfile() {
             streak={student?.streak}
           />
         )}
-        {activeTab !== 'Intake Form' && activeTab !== 'Practice Activity' && (
+        {activeTab === 'Fees' && (
+          <FeesTab studentProfileId={id} />
+        )}
+        {activeTab !== 'Intake Form' && activeTab !== 'Practice Activity' && activeTab !== 'Fees' && (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 text-sm">
             {activeTab} — coming soon
           </div>
