@@ -294,6 +294,7 @@ function EnrollmentCard({ enrollment, onAddInstallment }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 export default function FeesTab({ studentProfileId }) {
+  console.log('FEES TAB RENDERING', studentProfileId)
   const [enrollments,         setEnrollments]         = useState([])
   const [loading,             setLoading]             = useState(true)
   const [showAddEnrollment,   setShowAddEnrollment]   = useState(false)
