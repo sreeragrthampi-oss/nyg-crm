@@ -6,6 +6,7 @@ import IntakeFormTab from '../components/IntakeFormTab'
 import PracticeActivityTab from '../components/PracticeActivityTab'
 import FeesTab from '../components/FeesTab'
 import NotesTab from '../components/NotesTab'
+import ProgressTab from '../components/ProgressTab'
 
 const TABS = ['Intake Form', 'Progress', 'Practice Activity', 'Fees', 'Araiki', 'Notes']
 
@@ -73,6 +74,8 @@ export default function StudentProfile() {
         return <IntakeFormTab studentProfileId={id} />
       case 'Practice Activity':
         return <PracticeActivityTab studentId={student?.id} xp={student?.xp} streak={student?.streak} />
+      case 'Progress':
+        return <ProgressTab studentProfileId={id} />
       case 'Fees':
         return <FeesTab studentProfileId={id} />
       case 'Notes':
