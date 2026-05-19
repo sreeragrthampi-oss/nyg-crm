@@ -7,6 +7,7 @@ import PracticeActivityTab from '../components/PracticeActivityTab'
 import FeesTab from '../components/FeesTab'
 import NotesTab from '../components/NotesTab'
 import ProgressTab from '../components/ProgressTab'
+import AraikiTab from '../components/AraikiTab'
 
 const TABS = ['Intake Form', 'Progress', 'Practice Activity', 'Fees', 'Araiki', 'Notes']
 
@@ -80,6 +81,8 @@ export default function StudentProfile() {
         return <FeesTab studentProfileId={id} />
       case 'Notes':
         return <NotesTab studentProfileId={id} />
+      case 'Araiki':
+        return <AraikiTab studentProfileId={id} />
       default:
         return <ComingSoon label={activeTab} />
     }
