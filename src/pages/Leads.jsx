@@ -77,16 +77,21 @@ export default function Leads() {
   async function handleAddLead(e) {
     e.preventDefault()
     setSaving(true)
+    const raw = { ...newLead, status: 'new' }
+    const payload = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== ''))
     const { data, error } = await supabase
       .from('enquiries')
-      .insert({ ...newLead, status: 'new' })
+      .insert(payload)
       .select()
       .single()
-    if (!error && data) {
-      setEnquiries(prev => [data, ...prev])
-      setShowAddModal(false)
-      setNewLead(EMPTY_LEAD)
+    if (error) {
+      console.error('Add lead error:', error)
+      setSaving(false)
+      return
     }
+    setEnquiries(prev => [data, ...prev])
+    setShowAddModal(false)
+    setNewLead(EMPTY_LEAD)
     setSaving(false)
   }
 
