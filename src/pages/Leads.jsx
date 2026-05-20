@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, X, Phone, Mail, MapPin, BookOpen, Tag, Calendar } from 'lucide-react'
+import { Plus, X, Phone, Mail, MapPin, BookOpen, Tag, Calendar, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
@@ -20,8 +20,18 @@ const COURSES = [
   'Amasana / Inner Mastery Circle', 'TTC', 'Free Workshop',
 ]
 const FOLLOW_UP_TYPES = ['Call', 'WhatsApp', 'Email', 'Visit', 'Other']
+const LEAD_TYPES = ['Local', 'Foreigner', 'Online', 'Referral', 'Walk-in']
+const NEXT_STEPS = ['Book Appointment', 'Send Information', 'Enrol Directly', 'Level 2 Ready', 'Level 3 Ready', 'Follow Up Later']
 
-const EMPTY_LEAD = { name: '', phone: '', email: '', location: '', source: '', course_interested: '', follow_up_date: '', notes: '' }
+const LEAD_TYPE_STYLE = {
+  'Local':     'bg-gray-100 text-gray-600',
+  'Foreigner': 'bg-purple-100 text-purple-700',
+  'Online':    'bg-teal-100 text-teal-700',
+  'Referral':  'bg-amber-100 text-amber-700',
+  'Walk-in':   'bg-green-100 text-green-700',
+}
+
+const EMPTY_LEAD = { name: '', phone: '', email: '', location: '', source: '', course_interested: '', lead_type: '', next_step: '', follow_up_date: '', notes: '' }
 
 export default function Leads() {
   const { user } = useAuth()
@@ -36,6 +46,8 @@ export default function Leads() {
   const [saving, setSaving] = useState(false)
   const [showEnrollConfirm, setShowEnrollConfirm] = useState(false)
   const [enrolling, setEnrolling] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => { fetchEnquiries() }, [])
 
@@ -100,11 +112,38 @@ export default function Leads() {
     }
   }
 
+  async function handleFieldUpdate(field, value) {
+    const { data, error } = await supabase
+      .from('enquiries')
+      .update({ [field]: value || null })
+      .eq('id', selectedLead.id)
+      .select()
+      .single()
+    if (!error && data) {
+      setEnquiries(prev => prev.map(e => e.id === data.id ? data : e))
+      setSelectedLead(data)
+    }
+  }
+
   async function handleConfirmEnroll() {
     setEnrolling(true)
     await applyStatusChange('enrolled')
     setShowEnrollConfirm(false)
     setEnrolling(false)
+  }
+
+  async function handleDeleteLead() {
+    setDeleting(true)
+    const { error } = await supabase
+      .from('enquiries')
+      .delete()
+      .eq('id', selectedLead.id)
+    if (!error) {
+      setEnquiries(prev => prev.filter(e => e.id !== selectedLead.id))
+      setSelectedLead(null)
+      setShowDeleteConfirm(false)
+    }
+    setDeleting(false)
   }
 
   async function handleAddNote(e) {
@@ -233,6 +272,24 @@ export default function Leads() {
                   </select>
                 </Field>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Lead Type">
+                  <select value={newLead.lead_type}
+                    onChange={e => setNewLead(p => ({ ...p, lead_type: e.target.value }))}
+                    className={selectCls}>
+                    <option value="">Select type</option>
+                    {LEAD_TYPES.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </Field>
+                <Field label="Next Step">
+                  <select value={newLead.next_step}
+                    onChange={e => setNewLead(p => ({ ...p, next_step: e.target.value }))}
+                    className={selectCls}>
+                    <option value="">Select next step</option>
+                    {NEXT_STEPS.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </Field>
+              </div>
               <Field label="Follow-up Date">
                 <input type="date" value={newLead.follow_up_date}
                   onChange={e => setNewLead(p => ({ ...p, follow_up_date: e.target.value }))}
@@ -270,9 +327,18 @@ export default function Leads() {
                 <h2 className="font-semibold text-gray-900">{selectedLead.name}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">{selectedLead.phone}</p>
               </div>
-              <button onClick={() => setSelectedLead(null)} className="mt-0.5">
-                <X size={18} className="text-gray-400 hover:text-gray-600" />
-              </button>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Delete lead"
+                >
+                  <Trash2 size={16} />
+                </button>
+                <button onClick={() => setSelectedLead(null)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">
@@ -295,6 +361,32 @@ export default function Leads() {
                     {selectedLead.notes}
                   </div>
                 )}
+              </div>
+
+              {/* Lead Type & Next Step */}
+              <div className="p-5 border-b border-gray-100 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Lead Type</p>
+                  <select
+                    value={selectedLead.lead_type || ''}
+                    onChange={e => handleFieldUpdate('lead_type', e.target.value)}
+                    className={selectCls}
+                  >
+                    <option value="">Not set</option>
+                    {LEAD_TYPES.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Next Step</p>
+                  <select
+                    value={selectedLead.next_step || ''}
+                    onChange={e => handleFieldUpdate('next_step', e.target.value)}
+                    className={selectCls}
+                  >
+                    <option value="">Not set</option>
+                    {NEXT_STEPS.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
               </div>
 
               {/* Stage */}
@@ -398,6 +490,38 @@ export default function Leads() {
           </div>
         </div>
       )}
+
+      {/* ── Delete Confirmation ── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Trash2 size={20} className="text-red-500" />
+              </div>
+              <h3 className="font-bold text-gray-900">Delete Lead?</h3>
+              <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                Permanently delete <strong>{selectedLead?.name}</strong>? All notes for this lead will also be removed. This cannot be undone.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={handleDeleteLead}
+                disabled={deleting}
+                className="w-full bg-red-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Yes, Delete Lead'}
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="w-full border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -408,7 +532,14 @@ function LeadCard({ lead, onClick }) {
       onClick={onClick}
       className="bg-white rounded-xl border border-gray-200 p-3.5 cursor-pointer hover:shadow-md hover:border-[#1742b5]/20 transition-all"
     >
-      <p className="font-semibold text-gray-900 text-sm mb-2">{lead.name}</p>
+      <div className="flex items-start justify-between mb-2">
+        <p className="font-semibold text-gray-900 text-sm leading-tight">{lead.name}</p>
+        {lead.lead_type && (
+          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ml-1.5 ${LEAD_TYPE_STYLE[lead.lead_type] || 'bg-gray-100 text-gray-600'}`}>
+            {lead.lead_type}
+          </span>
+        )}
+      </div>
       {lead.phone && (
         <p className="text-xs text-gray-500 flex items-center gap-1.5 mb-1">
           <Phone size={11} className="text-gray-400" /> {lead.phone}
