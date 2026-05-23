@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(npm install *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit -m 'Debug: add console.log to FeesTab to confirm render *)",
+      "Bash(git commit -m 'Force redeploy: bump StudentProfile to v2 *)",
+      "Bash(npx supabase *)",
+      "Bash(git commit *)"
     ]
   }
 }
