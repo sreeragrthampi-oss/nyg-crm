@@ -42,6 +42,7 @@ export default function Meetups() {
   const [copied, setCopied] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => { fetchMeetups() }, [])
 
@@ -78,15 +79,21 @@ export default function Meetups() {
   async function handleAddMeetup(e) {
     e.preventDefault()
     setSaving(true)
+    setSaveError('')
     const payload = { ...newMeetup, xp_reward: Number(newMeetup.xp_reward) || 50 }
     if (!payload.location) delete payload.location
     if (!payload.description) delete payload.description
-    const { data, error } = await supabase.from('meetups').insert(payload).select('*, meetup_attendance(count)').single()
-    if (!error && data) {
-      setMeetups(prev => [data, ...prev])
-      setShowAddModal(false)
-      setNewMeetup({ ...EMPTY_MEETUP, event_code: generateEventCode() })
+    const { data, error } = await supabase.from('meetups').insert(payload).select('*').single()
+    if (error) {
+      console.error('Create meetup error:', error)
+      setSaveError(error.message)
+      setSaving(false)
+      return
     }
+    // Attach a zero count so MeetupCard renders without a separate fetch
+    setMeetups(prev => [{ ...data, meetup_attendance: [{ count: 0 }] }, ...prev])
+    setShowAddModal(false)
+    setNewMeetup({ ...EMPTY_MEETUP, event_code: generateEventCode() })
     setSaving(false)
   }
 
@@ -151,7 +158,7 @@ export default function Meetups() {
           </p>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => { setShowAddModal(true); setSaveError('') }}
           className="flex items-center gap-2 bg-[#1742b5] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#1338a0] transition-colors"
         >
           <Plus size={16} />
@@ -253,9 +260,14 @@ export default function Meetups() {
                     className={inputCls} />
                 </Field>
               </div>
+              {saveError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  {saveError}
+                </p>
+              )}
               <div className="flex gap-3 pt-1">
                 <button type="button"
-                  onClick={() => { setShowAddModal(false); setNewMeetup({ ...EMPTY_MEETUP, event_code: generateEventCode() }) }}
+                  onClick={() => { setShowAddModal(false); setSaveError(''); setNewMeetup({ ...EMPTY_MEETUP, event_code: generateEventCode() }) }}
                   className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
                   Cancel
                 </button>
