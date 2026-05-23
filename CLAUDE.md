@@ -47,14 +47,14 @@ NYG CRM is a laptop-first web dashboard for Nirvana Yoga Global admins to manage
 - profiles — id, full_name, role, avatar_url
 - students — profile_id, name, phone, email, xp, level_number, streak
 - practice_logs — student_id, practice_type, duration_minutes, xp_earned, created_at
-- enquiries — id, name, phone, email, location, source, course_interested, status, follow_up_date, notes, created_at
+- enquiries — id, name, phone, email, location, source, course_interested, lead_type, next_step, status, follow_up_date, notes, created_at
 
 ## New CRM Tables
 - enrollments — id, student_profile_id, course, status, start_date, fee_type, total_fee_agreed, notes
 - installments — id, enrollment_id, amount, due_date, paid_date, payment_method, status, receipt_notes
 - araiki_attunements — id, student_profile_id, attunement_number (1-6), date_attended, practice_start_date, ready_for_next, admin_notes
-- meetups — id, title, date, type, notes
-- meetup_attendance — id, meetup_id, student_profile_id, attended
+- meetups — id, title, date, type (online/offline), location, description, event_code (unique), xp_reward, created_at
+- meetup_attendance — id, meetup_id, student_profile_id (nullable), name, phone, is_student, attended_at
 - lead_notes — id, enquiry_id, admin_id, note, follow_up_type, created_at
 - student_notes — id, student_profile_id, admin_id, note, created_at
 - intake_forms — unified student intake/assessment form linked to profiles.id
@@ -83,11 +83,36 @@ New → Contacted → Interested → Enrolled → Lost
 ## Student Profile Page (src/pages/StudentProfile.jsx)
 Six-tab student profile accessible by clicking any student in the Students list:
 - Intake Form — full health/lifestyle/NYG assessment form (IntakeFormTab.jsx)
-- Progress — parameters over time, before/after comparison (coming soon)
+- Progress — periodic health/vitals snapshots, before/after comparison (ProgressTab.jsx + progress_entries table)
 - Practice Activity — live practice logs from NYG Connect (PracticeActivityTab.jsx)
 - Fees — enrollments and installments with ₹ tracking (FeesTab.jsx)
-- Araiki — attunement progress and challenge status (coming soon)
+- Araiki — attunement progress and challenge status per student (AraikiTab.jsx)
 - Notes — admin notes log with timestamps (NotesTab.jsx)
+
+## Araiki Page (src/pages/Araiki.jsx)
+Global dashboard showing all students currently in an active 21-day challenge:
+- Summary stats: Active Challenges, On Track, At Risk, Inactive
+- Live challenge tracker table with days elapsed and last Araiki practice log date
+- Status badges: green (logged within 3 days), yellow (3 days ago), red (4+ days / never)
+- "Launch All Challenges" button sets today as practice_start_date for pending attunements
+- Links to individual student profiles
+
+## Leads Page (src/pages/Leads.jsx)
+Kanban board across pipeline stages (New → Contacted → Interested → Enrolled → Lost):
+- Add lead modal with: name, phone, email, location, source, course_interested, lead_type, next_step, follow_up_date, notes
+- Lead card side panel with inline field editing (lead_type, next_step, pipeline stage)
+- Activity notes log per lead (follow_up_type + note text)
+- Delete lead with confirmation (cascades to lead_notes)
+- Enroll confirmation modal when moving to Enrolled stage
+
+## Meetups Page (src/pages/Meetups.jsx)
+Event management for bi-weekly sessions:
+- List view with date block, type badge (online/offline), location, attendance count, event code
+- Stats: Total Meetups, This Month, Upcoming
+- Add meetup modal: title, date/time, type, location/link, description, event_code (auto-generated, editable), xp_reward
+- Detail side panel: full info, copyable event code, XP reward
+- Attendance section: mark attendance (name, phone, existing student toggle + dropdown), attendee list with Student badges
+- Delete meetup with confirmation (cascades attendance)
 
 ## Debugging Protocol
 
@@ -101,11 +126,19 @@ When a feature is built but not showing on production:
 6. Fix: Vercel → Settings → Git → Disconnect → Reconnect GitHub
 7. Never spend more than 10 minutes debugging confirmed-correct code
 
+### Supabase Schema Changes
+- NEVER use Supabase CLI or Docker for migrations
+- Always write SQL to supabase/*.sql and tell the user to run it manually in the Supabase SQL Editor
+- For RLS policies, use an inline role check instead of is_admin() to avoid function availability issues:
+  `(select role from profiles where id = auth.uid()) = 'admin'`
+- If a table has RLS enabled but no policies applied, all operations are blocked by default
+
 ### Supabase RLS Issues
 If data is not loading after correct code is confirmed:
 - Check Network tab for 4xx errors on Supabase requests
-- Check RLS policies on the relevant table
-- Test with service role key to confirm it's an RLS issue
+- Check RLS policies on the relevant table in the Supabase dashboard
+- Most likely cause: policy creation errored during setup (e.g. is_admin() not found), leaving table with RLS on but no policies
+- Fix: run supabase/fix_*_rls.sql pattern — drop and recreate policies with the inline role check
 
 ## Do NOT
 - Build mobile layouts — laptop only
