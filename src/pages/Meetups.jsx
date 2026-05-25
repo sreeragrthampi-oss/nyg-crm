@@ -24,7 +24,20 @@ function formatShortDate(d) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
-const EMPTY_MEETUP = { title: '', date: '', type: 'offline', location: '', description: '', event_code: '', xp_reward: 50 }
+const LEAD_COURSES = [
+  'Regular Yoga', 'Araiki Local', 'Araiki Foreigner',
+  'Amasana / Inner Mastery Circle', 'TTC', 'Free Workshop',
+]
+
+const LEAD_STATUS_STYLE = {
+  new: 'bg-gray-100 text-gray-600',
+  contacted: 'bg-blue-100 text-blue-700',
+  interested: 'bg-amber-100 text-amber-700',
+  enrolled: 'bg-green-100 text-green-700',
+  lost: 'bg-red-100 text-red-600',
+}
+
+const EMPTY_MEETUP = { title: '', date: '', type: 'offline', location: '', description: '', event_code: '', xp_reward: 50, language: '' }
 const EMPTY_ATTENDEE = { name: '', phone: '', is_student: false, student_profile_id: '' }
 
 export default function Meetups() {
@@ -43,6 +56,11 @@ export default function Meetups() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [showAraikiLeads, setShowAraikiLeads] = useState(false)
+  const [araikiLeads, setAraikiLeads] = useState([])
+  const [araikiLeadsLoading, setAraikiLeadsLoading] = useState(false)
+  const [araikiCourseFilter, setAraikiCourseFilter] = useState('')
+  const [copiedNumbers, setCopiedNumbers] = useState(false)
 
   useEffect(() => { fetchMeetups() }, [])
 
@@ -139,12 +157,42 @@ export default function Meetups() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  async function fetchAraikiLeads() {
+    setAraikiLeadsLoading(true)
+    const { data } = await supabase
+      .from('enquiries')
+      .select('id, name, phone, course_interested, language_preference, mode_preference, status')
+      .neq('status', 'enrolled')
+      .neq('status', 'lost')
+      .order('created_at', { ascending: false })
+    setAraikiLeads(data || [])
+    setAraikiLeadsLoading(false)
+  }
+
+  function openAraikiLeads() {
+    setShowAraikiLeads(true)
+    fetchAraikiLeads()
+  }
+
+  function copyAllNumbers() {
+    const leads = araikiCourseFilter
+      ? araikiLeads.filter(l => l.course_interested === araikiCourseFilter)
+      : araikiLeads
+    const numbers = leads.filter(l => l.phone).map(l => l.phone).join(', ')
+    navigator.clipboard.writeText(numbers)
+    setCopiedNumbers(true)
+    setTimeout(() => setCopiedNumbers(false), 2000)
+  }
+
   const now = new Date()
   const upcoming = meetups.filter(m => new Date(m.date) >= now)
   const thisMonth = meetups.filter(m => {
     const d = new Date(m.date)
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
   })
+  const filteredAraikiLeads = araikiCourseFilter
+    ? araikiLeads.filter(l => l.course_interested === araikiCourseFilter)
+    : araikiLeads
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -213,25 +261,36 @@ export default function Meetups() {
                   placeholder="e.g. Bi-weekly Yoga Meetup"
                   className={inputCls} />
               </Field>
+              <Field label="Date & Time *">
+                <input required type="datetime-local" value={newMeetup.date}
+                  onChange={e => setNewMeetup(p => ({ ...p, date: e.target.value }))}
+                  className={inputCls} />
+              </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Date & Time *">
-                  <input required type="datetime-local" value={newMeetup.date}
-                    onChange={e => setNewMeetup(p => ({ ...p, date: e.target.value }))}
-                    className={inputCls} />
-                </Field>
                 <Field label="Type">
                   <select value={newMeetup.type}
                     onChange={e => setNewMeetup(p => ({ ...p, type: e.target.value }))}
                     className={selectCls}>
                     <option value="offline">Offline</option>
                     <option value="online">Online</option>
+                    <option value="hybrid">Hybrid</option>
+                  </select>
+                </Field>
+                <Field label="Language">
+                  <select value={newMeetup.language}
+                    onChange={e => setNewMeetup(p => ({ ...p, language: e.target.value }))}
+                    className={selectCls}>
+                    <option value="">Not specified</option>
+                    <option>Malayalam</option>
+                    <option>English</option>
+                    <option>Both</option>
                   </select>
                 </Field>
               </div>
-              <Field label={newMeetup.type === 'online' ? 'Meeting Link / Platform' : 'Venue / Location'}>
+              <Field label={newMeetup.type === 'online' ? 'Meeting Link / Platform' : newMeetup.type === 'hybrid' ? 'Venue / Meeting Link' : 'Venue / Location'}>
                 <input value={newMeetup.location}
                   onChange={e => setNewMeetup(p => ({ ...p, location: e.target.value }))}
-                  placeholder={newMeetup.type === 'online' ? 'e.g. Google Meet link' : 'e.g. NYG Studio, Kochi'}
+                  placeholder={newMeetup.type === 'online' ? 'e.g. Google Meet link' : newMeetup.type === 'hybrid' ? 'e.g. NYG Studio + Google Meet link' : 'e.g. NYG Studio, Kochi'}
                   className={inputCls} />
               </Field>
               <Field label="Description">
@@ -310,10 +369,19 @@ export default function Meetups() {
               {/* Details section */}
               <div className="p-5 space-y-3 border-b border-gray-100">
                 <div className="flex items-center gap-2">
-                  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${selectedMeetup.type === 'online' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${
+                    selectedMeetup.type === 'online' ? 'bg-blue-50 text-blue-700' :
+                    selectedMeetup.type === 'hybrid' ? 'bg-purple-50 text-purple-700' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
                     <Wifi size={11} />
-                    {selectedMeetup.type === 'online' ? 'Online' : 'Offline'}
+                    {selectedMeetup.type === 'online' ? 'Online' : selectedMeetup.type === 'hybrid' ? 'Hybrid' : 'Offline'}
                   </span>
+                  {selectedMeetup.language && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                      {selectedMeetup.language}
+                    </span>
+                  )}
                   <span className="text-xs text-gray-500">{formatDate(selectedMeetup.date)}</span>
                 </div>
 
@@ -348,6 +416,13 @@ export default function Meetups() {
                   <Star size={13} className="text-amber-500 fill-amber-400" />
                   <span className="text-sm text-gray-700 font-medium">{selectedMeetup.xp_reward} XP reward</span>
                 </div>
+                <button
+                  onClick={openAraikiLeads}
+                  className="w-full flex items-center justify-center gap-2 bg-[#1742b5]/5 text-[#1742b5] border border-[#1742b5]/20 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1742b5]/10 transition-colors"
+                >
+                  <Users size={14} />
+                  Araiki Leads
+                </button>
               </div>
 
               {/* Attendance section */}
@@ -432,6 +507,97 @@ export default function Meetups() {
         </div>
       )}
 
+      {/* ── Araiki Leads Modal ── */}
+      {showAraikiLeads && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="font-semibold text-gray-900">Araiki Leads</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {araikiLeadsLoading ? 'Loading…' : `${filteredAraikiLeads.length} active leads`}
+                </p>
+              </div>
+              <button onClick={() => setShowAraikiLeads(false)}>
+                <X size={18} className="text-gray-400 hover:text-gray-600" />
+              </button>
+            </div>
+
+            {/* Filter bar */}
+            <div className="px-6 py-3 border-b border-gray-100 flex-shrink-0">
+              <select
+                value={araikiCourseFilter}
+                onChange={e => setAraikiCourseFilter(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#1742b5] text-gray-700"
+              >
+                <option value="">All Courses</option>
+                {LEAD_COURSES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Table */}
+            <div className="flex-1 overflow-y-auto">
+              {araikiLeadsLoading ? (
+                <div className="py-16 text-center text-gray-400 text-sm">Loading…</div>
+              ) : filteredAraikiLeads.length === 0 ? (
+                <div className="py-16 text-center text-gray-400 text-sm">No active leads</div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">Name</th>
+                      <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-3">Phone</th>
+                      <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-3">Language</th>
+                      <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-3">Mode</th>
+                      <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAraikiLeads.map(lead => (
+                      <tr key={lead.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                        <td className="px-5 py-3 text-sm font-medium text-gray-900">{lead.name}</td>
+                        <td className="px-3 py-3 text-sm text-gray-600">{lead.phone || '—'}</td>
+                        <td className="px-3 py-3">
+                          {lead.language_preference
+                            ? <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600">{lead.language_preference}</span>
+                            : <span className="text-xs text-gray-300">—</span>}
+                        </td>
+                        <td className="px-3 py-3">
+                          {lead.mode_preference
+                            ? <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-600">{lead.mode_preference}</span>
+                            : <span className="text-xs text-gray-300">—</span>}
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${LEAD_STATUS_STYLE[lead.status] || 'bg-gray-100 text-gray-600'}`}>
+                            {lead.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0 flex items-center justify-between">
+              <p className="text-xs text-gray-400">
+                {filteredAraikiLeads.filter(l => l.phone).length} numbers available
+              </p>
+              <button
+                onClick={copyAllNumbers}
+                disabled={!filteredAraikiLeads.some(l => l.phone)}
+                className="flex items-center gap-2 bg-[#1742b5] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#1338a0] transition-colors disabled:opacity-40"
+              >
+                {copiedNumbers ? <Check size={14} className="text-green-300" /> : <Copy size={14} />}
+                {copiedNumbers ? 'Copied!' : 'Copy All Numbers'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Delete Confirmation ── */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -495,9 +661,9 @@ function MeetupCard({ meetup, isUpcoming, onClick, active }) {
           )}
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <span className={`inline-flex items-center gap-1 text-xs font-medium ${meetup.type === 'online' ? 'text-blue-600' : 'text-gray-500'}`}>
+          <span className={`inline-flex items-center gap-1 text-xs font-medium ${meetup.type === 'online' ? 'text-blue-600' : meetup.type === 'hybrid' ? 'text-purple-600' : 'text-gray-500'}`}>
             <Wifi size={10} />
-            {meetup.type === 'online' ? 'Online' : 'Offline'}
+            {meetup.type === 'online' ? 'Online' : meetup.type === 'hybrid' ? 'Hybrid' : 'Offline'}
           </span>
           {meetup.location && (
             <span className="text-xs text-gray-400 flex items-center gap-1 truncate max-w-[180px]">
