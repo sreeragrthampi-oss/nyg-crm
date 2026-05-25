@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 function formatDate(d) {
@@ -20,6 +21,84 @@ function daysSince(dateStr) {
 
 const INPUT_CLS =
   'px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1742b5]/20 focus:border-[#1742b5] w-full'
+
+// ── Checklist helpers ─────────────────────────────────────────────────────────
+
+const CHECKLIST_1 = [
+  { field: 'checklist_video_sent',       label: 'Practice video sent' },
+  { field: 'checklist_pdf_sent',         label: 'PDF sent' },
+  { field: 'checklist_whatsapp_added',   label: 'Added to WhatsApp group' },
+  { field: 'checklist_newsletter_added', label: 'Added to newsletter (Kit)' },
+  { field: 'checklist_next_discussed',   label: 'Next attunement discussed' },
+]
+
+function getChecklistItems(attunement) {
+  if (attunement.attunement_number === 1) return CHECKLIST_1
+  const items = [
+    { field: 'checklist_symbols_taught', label: '3 Symbols taught' },
+  ]
+  if (attunement.checklist_symbols_taught) {
+    items.push({ field: 'checklist_symbols_pdf_sent', label: '3 Symbols PDF sent' })
+  }
+  items.push(
+    { field: 'checklist_video_sent',     label: 'Practice video confirmed received' },
+    { field: 'checklist_next_discussed', label: 'Next attunement discussed' },
+  )
+  return items
+}
+
+function getChecklistProgress(a) {
+  if (!a) return { done: 0, total: 0 }
+  const items = getChecklistItems(a)
+  // For 2-6 with symbols_taught unchecked, base total excludes symbols_pdf_sent (already excluded by getChecklistItems)
+  const done = items.filter(i => a[i.field]).length
+  return { done, total: items.length }
+}
+
+function ChecklistBadge({ attunement }) {
+  const { done, total } = getChecklistProgress(attunement)
+  if (total === 0) return null
+  return (
+    <div className={`text-[10px] font-semibold mt-0.5 ${
+      done === total ? 'text-green-600' : done > 0 ? 'text-orange-500' : 'text-gray-300'
+    }`}>
+      {done}/{total}
+    </div>
+  )
+}
+
+function AttunementChecklist({ attunement, onToggle }) {
+  const items = getChecklistItems(attunement)
+  const { done, total } = getChecklistProgress(attunement)
+  return (
+    <div className="mt-5 pt-4 border-t border-gray-100">
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Post-Attunement Checklist</p>
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+          done === total && total > 0 ? 'bg-green-50 text-green-700' :
+          done > 0 ? 'bg-orange-50 text-orange-600' :
+          'bg-gray-100 text-gray-400'
+        }`}>
+          {done}/{total} complete
+        </span>
+      </div>
+      <div className="space-y-0.5">
+        {items.map(({ field, label }) => (
+          <button
+            key={field}
+            onClick={() => onToggle(attunement.id, field, attunement[field])}
+            className="flex items-center justify-between w-full py-2 px-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+          >
+            <span className="text-sm text-gray-700">{label}</span>
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ml-2 transition-colors ${attunement[field] ? 'bg-green-500' : 'bg-gray-200'}`}>
+              {attunement[field] && <Check size={11} className="text-white" strokeWidth={3} />}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 // ── Add Attunement Modal ──────────────────────────────────────────────────────
 function AddAttunementModal({ nextNumber, studentProfileId, onClose, onSaved }) {
@@ -208,6 +287,19 @@ export default function AraikiTab({ studentProfileId }) {
     setLaunching(false)
   }
 
+  async function handleChecklistToggle(attunementId, field, currentValue) {
+    const newVal = !currentValue
+    const { data, error } = await supabase
+      .from('araiki_attunements')
+      .update({ [field]: newVal })
+      .eq('id', attunementId)
+      .select()
+      .single()
+    if (!error && data) {
+      setAttunements(prev => prev.map(a => a.id === attunementId ? data : a))
+    }
+  }
+
   if (loading) {
     return <div className="py-14 text-center text-gray-400 text-sm">Loading Araiki data…</div>
   }
@@ -286,7 +378,10 @@ export default function AraikiTab({ studentProfileId }) {
                 <div className="text-center mt-2">
                   <div className="text-xs font-semibold text-gray-600">Attunement {n}</div>
                   {completed ? (
-                    <div className="text-xs text-gray-400 mt-0.5">{formatDate(a.date_attended)}</div>
+                    <>
+                      <div className="text-xs text-gray-400 mt-0.5">{formatDate(a.date_attended)}</div>
+                      <ChecklistBadge attunement={a} />
+                    </>
                   ) : isNext ? (
                     <div
                       className={`text-xs mt-0.5 font-medium ${
@@ -346,6 +441,10 @@ export default function AraikiTab({ studentProfileId }) {
                 <p className="text-sm text-gray-700 leading-relaxed">{selectedAttunement.admin_notes}</p>
               </div>
             )}
+            <AttunementChecklist
+              attunement={selectedAttunement}
+              onToggle={handleChecklistToggle}
+            />
           </div>
         )}
       </div>
