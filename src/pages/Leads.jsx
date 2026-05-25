@@ -22,6 +22,8 @@ const COURSES = [
 const FOLLOW_UP_TYPES = ['Call', 'WhatsApp', 'Email', 'Visit', 'Other']
 const LEAD_TYPES = ['Local', 'Foreigner', 'Online', 'Referral', 'Walk-in']
 const NEXT_STEPS = ['Book Appointment', 'Send Information', 'Enrol Directly', 'Level 2 Ready', 'Level 3 Ready', 'Follow Up Later']
+const LANGUAGE_PREFS = ['Malayalam', 'English', 'Either']
+const MODE_PREFS = ['Online', 'Offline', 'Either']
 
 const LEAD_TYPE_STYLE = {
   'Local':     'bg-gray-100 text-gray-600',
@@ -31,7 +33,7 @@ const LEAD_TYPE_STYLE = {
   'Walk-in':   'bg-green-100 text-green-700',
 }
 
-const EMPTY_LEAD = { name: '', phone: '', email: '', location: '', source: '', course_interested: '', lead_type: '', next_step: '', follow_up_date: '', notes: '' }
+const EMPTY_LEAD = { name: '', phone: '', email: '', location: '', source: '', course_interested: '', lead_type: '', next_step: '', follow_up_date: '', notes: '', language_preference: '', mode_preference: '' }
 
 export default function Leads() {
   const { user } = useAuth()
@@ -295,6 +297,24 @@ export default function Leads() {
                   </select>
                 </Field>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Language Preference">
+                  <select value={newLead.language_preference}
+                    onChange={e => setNewLead(p => ({ ...p, language_preference: e.target.value }))}
+                    className={selectCls}>
+                    <option value="">Select language</option>
+                    {LANGUAGE_PREFS.map(l => <option key={l}>{l}</option>)}
+                  </select>
+                </Field>
+                <Field label="Mode Preference">
+                  <select value={newLead.mode_preference}
+                    onChange={e => setNewLead(p => ({ ...p, mode_preference: e.target.value }))}
+                    className={selectCls}>
+                    <option value="">Select mode</option>
+                    {MODE_PREFS.map(m => <option key={m}>{m}</option>)}
+                  </select>
+                </Field>
+              </div>
               <Field label="Follow-up Date">
                 <input type="date" value={newLead.follow_up_date}
                   onChange={e => setNewLead(p => ({ ...p, follow_up_date: e.target.value }))}
@@ -391,6 +411,30 @@ export default function Leads() {
                     <option value="">Not set</option>
                     {NEXT_STEPS.map(s => <option key={s}>{s}</option>)}
                   </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Language</p>
+                    <select
+                      value={selectedLead.language_preference || ''}
+                      onChange={e => handleFieldUpdate('language_preference', e.target.value)}
+                      className={selectCls}
+                    >
+                      <option value="">Not set</option>
+                      {LANGUAGE_PREFS.map(l => <option key={l}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Mode</p>
+                    <select
+                      value={selectedLead.mode_preference || ''}
+                      onChange={e => handleFieldUpdate('mode_preference', e.target.value)}
+                      className={selectCls}
+                    >
+                      <option value="">Not set</option>
+                      {MODE_PREFS.map(m => <option key={m}>{m}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -560,6 +604,20 @@ function LeadCard({ lead, onClick }) {
         <p className="text-xs text-gray-400 flex items-center gap-1.5">
           <Tag size={11} className="text-gray-300" /> {lead.source}
         </p>
+      )}
+      {(lead.language_preference || lead.mode_preference) && (
+        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          {lead.language_preference && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
+              {lead.language_preference}
+            </span>
+          )}
+          {lead.mode_preference && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-600">
+              {lead.mode_preference}
+            </span>
+          )}
+        </div>
       )}
       {lead.follow_up_date && (
         <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-1.5">
