@@ -41,13 +41,17 @@ export default function Dashboard() {
           .select('id', { count: 'exact', head: true })
           .eq('follow_up_date', today)
           .neq('status', 'enrolled')
-          .neq('status', 'lost'),
+          .neq('status', 'lost')
+          .eq('no_followup', false)
+          .eq('do_not_contact', false),
 
         supabase.from('enquiries')
           .select('id', { count: 'exact', head: true })
           .lt('follow_up_date', today)
           .neq('status', 'enrolled')
-          .neq('status', 'lost'),
+          .neq('status', 'lost')
+          .eq('no_followup', false)
+          .eq('do_not_contact', false),
 
         supabase.from('enquiries')
           .select('id', { count: 'exact', head: true })
@@ -64,6 +68,8 @@ export default function Dashboard() {
           .not('follow_up_date', 'is', null)
           .neq('status', 'enrolled')
           .neq('status', 'lost')
+          .eq('no_followup', false)
+          .eq('do_not_contact', false)
           .order('follow_up_date', { ascending: true })
           .limit(20),
 

@@ -366,6 +366,13 @@ export default function Leads() {
               </div>
             </div>
 
+            {selectedLead.do_not_contact && (
+              <div className="flex items-center gap-2.5 px-5 py-3 bg-red-50 border-b border-red-100 flex-shrink-0">
+                <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                <p className="text-sm font-semibold text-red-700">Do Not Contact</p>
+              </div>
+            )}
+
             <div className="flex-1 overflow-y-auto">
               {/* Details */}
               <div className="p-5 space-y-2.5 border-b border-gray-100">
@@ -436,6 +443,26 @@ export default function Leads() {
                     </select>
                   </div>
                 </div>
+              </div>
+
+              {/* Flags */}
+              <div className="p-5 border-b border-gray-100 space-y-0.5">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Flags</p>
+                {[
+                  { field: 'no_followup',     label: 'No Follow-up',    activeColor: 'bg-amber-500' },
+                  { field: 'do_not_contact',  label: 'Do Not Contact',  activeColor: 'bg-red-500' },
+                ].map(({ field, label, activeColor }) => (
+                  <button
+                    key={field}
+                    onClick={() => handleFieldUpdate(field, !selectedLead[field])}
+                    className="flex items-center justify-between w-full py-2 px-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <span className="text-sm text-gray-700">{label}</span>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${selectedLead[field] ? activeColor : 'bg-gray-200'}`}>
+                      {selectedLead[field] && <Check size={11} className="text-white" strokeWidth={3} />}
+                    </div>
+                  </button>
+                ))}
               </div>
 
               {/* Stage */}
@@ -612,6 +639,20 @@ function LeadCard({ lead, onClick }) {
           </span>
         )}
       </div>
+      {(lead.do_not_contact || lead.no_followup) && (
+        <div className="flex items-center gap-1 mb-2 flex-wrap">
+          {lead.do_not_contact && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">
+              Do Not Contact
+            </span>
+          )}
+          {lead.no_followup && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+              No Follow-up
+            </span>
+          )}
+        </div>
+      )}
       {lead.phone && (
         <p className="text-xs text-gray-500 flex items-center gap-1.5 mb-1">
           <Phone size={11} className="text-gray-400" /> {lead.phone}
