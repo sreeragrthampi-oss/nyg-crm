@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, X, Phone, Mail, MapPin, BookOpen, Tag, Calendar, Trash2 } from 'lucide-react'
+import { Plus, X, Phone, Mail, MapPin, BookOpen, Tag, Calendar, Trash2, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
@@ -453,7 +453,7 @@ export default function Leads() {
               </div>
 
               {/* Notes */}
-              <div className="p-5">
+              <div className="p-5 border-b border-gray-100">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Activity Notes</p>
 
                 {/* Add note */}
@@ -500,6 +500,29 @@ export default function Leads() {
                   {notes.length === 0 && (
                     <p className="text-xs text-gray-300 text-center py-4">No notes yet</p>
                   )}
+                </div>
+              </div>
+
+              {/* Communication Channels */}
+              <div className="p-5">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Communication Channels</p>
+                <div className="space-y-1">
+                  {[
+                    { field: 'in_kerala_whatsapp', label: 'Added to Kerala WhatsApp group' },
+                    { field: 'in_nyg_whatsapp',    label: 'Added to NYG Global WhatsApp group' },
+                    { field: 'in_newsletter',       label: 'Added to Newsletter (Kit)' },
+                  ].map(({ field, label }) => (
+                    <button
+                      key={field}
+                      onClick={() => handleFieldUpdate(field, !selectedLead[field])}
+                      className="flex items-center justify-between w-full py-2.5 px-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <span className="text-sm text-gray-700">{label}</span>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${selectedLead[field] ? 'bg-green-500' : 'bg-gray-200'}`}>
+                        {selectedLead[field] && <Check size={11} className="text-white" strokeWidth={3} />}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
