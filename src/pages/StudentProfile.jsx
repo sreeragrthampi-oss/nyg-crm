@@ -1,5 +1,6 @@
 // v3
 import { useState, useEffect } from 'react'
+import { Check } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import IntakeFormTab from '../components/IntakeFormTab'
@@ -50,7 +51,10 @@ export default function StudentProfile() {
         profiles:profile_id (
           id,
           full_name,
-          avatar_url
+          avatar_url,
+          in_kerala_whatsapp,
+          in_nyg_whatsapp,
+          in_newsletter
         )
       `)
       .eq('profile_id', id)
@@ -67,6 +71,17 @@ export default function StudentProfile() {
 
   if (loading) {
     return <div className="p-6 py-16 text-center text-gray-400 text-sm">Loading student…</div>
+  }
+
+  async function handleChannelToggle(field) {
+    const newVal = !student?.profiles?.[field]
+    const { error } = await supabase
+      .from('profiles')
+      .update({ [field]: newVal })
+      .eq('id', id)
+    if (!error) {
+      setStudent(prev => ({ ...prev, profiles: { ...prev.profiles, [field]: newVal } }))
+    }
   }
 
   function renderTab() {
@@ -135,6 +150,32 @@ export default function StudentProfile() {
               <div className="text-2xl font-bold text-gray-900">{student?.streak ?? 0}</div>
               <div className="text-xs text-gray-400 mt-0.5 uppercase tracking-wide">Streak</div>
             </div>
+          </div>
+        </div>
+
+        {/* Communication Channels */}
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Communication Channels</p>
+          <div className="grid grid-cols-3 gap-1">
+            {[
+              { field: 'in_kerala_whatsapp', label: 'Added to Kerala WhatsApp group' },
+              { field: 'in_nyg_whatsapp',    label: 'Added to NYG Global WhatsApp group' },
+              { field: 'in_newsletter',      label: 'Added to Newsletter (Kit)' },
+            ].map(({ field, label }) => {
+              const checked = !!student?.profiles?.[field]
+              return (
+                <button
+                  key={field}
+                  onClick={() => handleChannelToggle(field)}
+                  className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                >
+                  <span className="text-sm text-gray-700 leading-snug">{label}</span>
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ml-2 transition-colors ${checked ? 'bg-green-500' : 'bg-gray-200'}`}>
+                    {checked && <Check size={11} className="text-white" strokeWidth={3} />}
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>
