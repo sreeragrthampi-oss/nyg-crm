@@ -50,6 +50,7 @@ export default function Leads() {
   const [enrolling, setEnrolling] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => { fetchEnquiries() }, [])
 
@@ -79,7 +80,14 @@ export default function Leads() {
   async function handleAddLead(e) {
     e.preventDefault()
     setSaving(true)
-    const raw = { ...newLead, status: 'new' }
+    setSaveError('')
+    const raw = {
+      ...newLead,
+      name: newLead.name.trim(),
+      phone: newLead.phone.trim(),
+      status: 'new',
+    }
+    // Strip empty strings — optional fields become null in the DB
     const payload = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== ''))
     const { data, error } = await supabase
       .from('enquiries')
@@ -87,13 +95,14 @@ export default function Leads() {
       .select()
       .single()
     if (error) {
-      console.error('Add lead error:', error)
+      setSaveError(error.message)
       setSaving(false)
       return
     }
     setEnquiries(prev => [data, ...prev])
     setShowAddModal(false)
     setNewLead(EMPTY_LEAD)
+    setSaveError('')
     setSaving(false)
   }
 
@@ -185,7 +194,7 @@ export default function Leads() {
           </p>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => { setShowAddModal(true); setSaveError('') }}
           className="flex items-center gap-2 bg-[#1742b5] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#1338a0] transition-colors"
         >
           <Plus size={16} />
@@ -232,7 +241,7 @@ export default function Leads() {
           <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
               <h2 className="font-semibold text-gray-900">Add New Lead</h2>
-              <button onClick={() => { setShowAddModal(false); setNewLead(EMPTY_LEAD) }}>
+              <button onClick={() => { setShowAddModal(false); setNewLead(EMPTY_LEAD); setSaveError('') }}>
                 <X size={18} className="text-gray-400 hover:text-gray-600" />
               </button>
             </div>
@@ -325,9 +334,14 @@ export default function Leads() {
                   onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))}
                   placeholder="Any initial notes..." className={`${inputCls} resize-none`} />
               </Field>
+              {saveError && (
+                <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2.5 text-xs text-red-700 leading-relaxed">
+                  {saveError}
+                </div>
+              )}
               <div className="flex gap-3 pt-1">
                 <button type="button"
-                  onClick={() => { setShowAddModal(false); setNewLead(EMPTY_LEAD) }}
+                  onClick={() => { setShowAddModal(false); setNewLead(EMPTY_LEAD); setSaveError('') }}
                   className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
                   Cancel
                 </button>
